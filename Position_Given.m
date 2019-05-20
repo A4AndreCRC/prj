@@ -1,50 +1,22 @@
-%PROGETTO ZERO INTERLEAVING
-% Lo script deve ricostruire una sequenza x_n a partire da una sua versione "zero interleaved" indicata con y_n
-% in cui ogni M campioni sono inseriti M-1 zeri (al posto dei campioni originari)
-
-% Esempio:
-% sequenza originaria                       x_n = 1,2,3,4,5,6,7,8,9,10...
-% sequenza zero_interleaved (fattore M = 3)  y_n= 1,0,0,4,0,0,7,0,0,10...
-
-% La sequenza di partenza x_n ha 400 campioni ed è¨ fornita nel file zerointerleaving.mat
-
-% Si richiede che lo script Matlab esegua le seguenti operazioni:
-
-% - generi la sequeza zero-interleaved y_n con M variabile (M = 2,3,...),
-% cioè si deve poter scegliere il numero di campioni (M-1) da azzerare.
-
-% - permetta di scegliere la posizione dei campioni non nulli, es. si chiede la
-% possibilitÃ  di generare M possibili sequenze con campioni non nulli in posizione
-% Mk, Mk+1, Mk+2, ... Mk+(M-1) con k = 0,1,2,...
-
-% - rappresenti graficamente la sequenza x_n e le sequenze y_n (zero_interleaved)
-% nel dominio del tempo e delle frequenze (trasformata discreta di Fourier).
+%Il codice non è statto ancora testato sulla sequenza di 401 campioni
 %
-% - rappresenti graficamente nel dominio del tempo e delle frequenze il filtro impiegato per la ricostruzione
-% della sequenza x_n
-
-% - rappresenti graficamente la sequenza originaria x_n e la sua versione
-% ricostruita, mostrando che la sequenza ricostruita è la stessa qualunque
-% sia la scelta della posizione dei campioni non nulli (purché non vi siano fenomeni di alias).
-
-% - permetta di valutare il massimo valore di M che non produce distorsione del segnale ricostrutito.
-
-% Strutturare lo script Matlab in modo tale che possa essere rapidamente adattato per gestire sequenze in ingresso
-% diverse da quella assegnata (es. diverso numero di campioni).
-% Definire in modo chiaro le variabili utilizzate e commentare sinteticamente i vari passi dello script.
-%START
+START
 close all
 clear
 clc
-%prompt = ('Inserisci nome file :  ');
-%nome_file = input (prompt, 's');
+%prompt = ('Inserisci nome file :  '); %caricamento del file originario
+%nome_file = input (prompt, 's'); 
 %load (nome_file);
 load zerointerleaving.mat
-dim = length(x);
-M = input('Inserisci M: ');
+dim = length(x); %numero di campioni della sequenza 
+M = input('Inserisci M: '); %scelta del passo di zero-interleaving
+P = -1; %P permette di scegliere la pos del primo campione non nullo
+while (P < 0 || P > M)
+    P = input('\nInserisci la posizione del primo campione non nullo (0-M):  ' );
+end
 f_s = 1/M; %frequenza di campionamento, ma potremmo toglierla perché non serve
 a_x = 'Campioni';
-%ZERO-INTERLEAVING
+ZERO-INTERLEAVING
 y_n = zeros(M,dim); %crea una matrice di zeri contenente le M sequenze lungo le righe
 Yf_n = y_n; %copia la matrice creata in quella che sarà la trasformata
 for j = 1:M %ciclo per creare M sequenze zero-interleaved
@@ -54,9 +26,9 @@ for j = 1:M %ciclo per creare M sequenze zero-interleaved
         i = i+M;
     end
 end
-%TRASFORMAZIONI 
-n = (0:dim-1);
-Xf=fft(x);
+TRASFORMAZIONI 
+n = (0:dim-1); % traslazione dell'asse delle ascisse a sx per avere il primo campione in posizione 0 invece che 1
+Xf=fft(x);%trasformata di Fourier della sequenza di partenza
 figure
 subplot(2,1,1)
 stem (n,x);
@@ -68,79 +40,135 @@ stem (n,real(Xf));
 xlabel (a_x)
 title('Sequenza di partenza trasformata')
 %pause
-for k = 1:M
-    titolo = 'Sequenza con primo elemento diverso da 0 in posizione %d';
-    pos = k-1; %indice di posizione che viene riportato nel grafico
-    Yf_n(k,:) = fft(y_n(k,:));
-    figure
-    subplot(2,1,1)
-    stem(n,y_n(k,:));
-    xlabel (a_x)
-    title(sprintf(titolo,pos))
-    subplot(2,1,2)
-    stem(n,real(Yf_n(k,:)));
-    xlabel (a_x)
-    title('Sequenza trasformata')
-    %pause
-end
-%FILTRO
+titolo = 'Sequenza con primo elemento diverso da 0 in posizione %d';
+Yf_n(P,:) = fft(y_n(P,:)); %trasformata della sequenza zero-interleaved scelta dell'utente
 figure
-t=-dim/2:dim/2-1;
-filtro_t=sinc(t/M);
-filtro=abs(fft(filtro_t));
+subplot(2,1,1)
+stem(n,y_n(P,:));
+xlabel (a_x)
+title(sprintf(titolo,P))
+subplot(2,1,2)
+stem(n,real(Yf_n(P,:)));
+xlabel (a_x)
+title('Sequenza trasformata')
+%pause
+FILTRO
+figure
+t = -dim/2:dim/2-1; %range di rappresentazione del filtro nei tempi
+filtro_t = sinc(t/M); %filtro nei tempi: seno cardinale
+filtro = (fft(filtro_t)); %filtro in frequenza: rettangolo
 subplot (2,1,1)
 plot(t,filtro_t);
 title('Filtro nei tempi')
 xlabel (a_x)
 subplot (2,1,2)
-stem(filtro);
+stem(abs(filtro));
 title('Filtro in frequenza')
 xlabel (a_x)
 %pause
+%inizializzazione matrici di supporto
 Zf_n=zeros(M,dim);
 z=zeros(M,(2*dim)-1);
 u=zeros(M,dim);
 %errorequadraticotempo=zeros(M,dim);
-for i=1:M
-    figure
-    %figure(3)
-    Zf_n(i,:) = Yf_n(i,:).*filtro;
-    z(i,:) = conv(y_n(i,:),filtro_t);
-    u(i,:) = z(i,(dim/2)+1:(3/2)*dim); %range di campioni utili della sequenza ricostruita
-    errorequadratico=immse(x(1,:),u(i,:));
-    %subplot(2,1,1)
-    stem(n,u(i,:),'filled','DisplayName','Sequenza ricostruita');
-    xlabel (a_x)
-    title('Sequenza di partenza e ricostruita')
-    legend
-    %title('Sequenza ricostruita mediante filtro nei tempi')
-    %subplot(2,1,2)
-    hold on
-    stem (n,x,'r','DisplayName','Sequenza di partenza');
-    %xlabel ('Campioni')
-    %title('Sequenza di Partenza')
-    %stem(abs(errorequadraticotempo(i,:)));
-    hold off
-    %subplot(3,1,3);
-    %stem(real(Zf_n(i,:)));
-    title('Sequenza ricostruita mediante filtro in frequenza')
-    %pause
-    format shortE;
-    output = 'Errore quadratico medio sequenza %d = %d \n';
-    fprintf(output,i,errorequadratico)
-    if errorequadratico > 1.0e-03
-        output = 'Errore quadratico medio superiore al limite! \n\n';
-        fprintf(output)
-    end
-    %subplot(4,1,4)
-    %stem(errorequadraticofrequenza(i,:));
-    %pause
+figure
+%figure(3)
+Zf_n(P,:) = Yf_n(P,:).*filtro; %sequenza ricostruita calcolata come prodotto nelle frequenze
+z(P,:) = conv(y_n(P,:),filtro_t); %sequenza ricostruita mediante convoluzione nei tempi
+u(P,:) = z(P,(dim/2)+1:(3/2)*dim); %range di campioni utili della sequenza ricostruita
+errorequadratico=immse(x(1,:),u(P,:));
+%subplot(2,1,1)
+%grafico per verificare che la sequenza originale è
+%effettivamente uguale alla sequenza ricostruita, 
+%a meno di uno scarto (entro un certo standard)
+stem(n,u(P,:),'filled','DisplayName','Sequenza ricostruita');
+xlabel (a_x)
+title('Sequenza di partenza e ricostruita')
+legend
+%title('Sequenza ricostruita mediante filtro nei tempi')
+%subplot(2,1,2)
+hold on
+stem (n,x,'r','DisplayName','Sequenza di partenza');
+xlabel ('Campioni')
+title('Sequenza di Partenza')
+%stem(abs(errorequadraticotempo(i,:)));
+hold off
+%subplot(3,1,3);
+%stem(real(Zf_n(P,:)));
+%title('Sequenza ricostruita mediante filtro in frequenza')
+%pause
+format shortE;  %setta il formato dell'output in notazione esponenziale
+output = 'Errore quadratico medio = %d \n';
+fprintf(output,errorequadratico)
+if errorequadratico > 1.0e-03
+    output = 'Errore quadratico medio superiore al limite! \n\n';
+    fprintf(output)
 end
-%ADD ?
-%   - error('M scelto non rispetta il teorema del campionamento!');
-%   - per M più grande di un certo valore si va in alias, la sequenza si deforma
-%     il filtro deve eliminare le repliche spettrali: M = numero di repliche
-%   - relazionare sul grafico M con lo scarto quadratico
-
-%NOTA:  I COMMENTI RIMASTI CONTENGONO QUASI ESCLUSIVAMENTE 
-%       CODICE DA RIAGGIUNGERE A SCRIPT COMPLETATO
+GRAFICO M - MSE
+%Il grafico riporta la relazione tra M ed MSE fino al primo valore di M
+%che supera la soglia proposta dal professore
+M = 1;
+P = 1;
+k = 1;
+errorequadratico = -1;
+mse = zeros(1,dim);
+%Il ciclo while viene ripetuto finche' M non causa un MSE troppo alto
+%Potrebbe essere implementato in modo tale da ripetersi per M che arriva
+%fino a DIM, ma mi sembra esagerato; allo stesso modo non vedo il motivo
+%ne il fondamento teorico per fissare un valore di M a priori
+%questo algoritmo e' adattabile a ogni valore di soglia per MSE
+%NOTA: P non puo' essere il valore immesso all'inizio dall'utente
+%perche' ci possono essere casi in cui M<P nei primi passi dell'algoritmo
+%       ...(MA QUESTO E' UN PROBLEMA DA RISOLVERE)...
+%Dal codice di Progetto_zero_interleaving risulta che MSE varia a seconda di
+%P, ma sono variazioni nell' ODG di 10^-6 che non fanno variare
+%l'andamento complessivo del grafico M-MSE
+%
+%Questo algoritmo permette di ricavare M max, basta prendere l'indice di posizione del
+%vettore MSE nella quale si trova il primo elemento che supera il limite
+%suggerito dal prof 
+%       ...(VA CORRETTA L'INDICIZZAZIONE)...
+while errorequadratico < 1.0e-03 
+    M = M+1;
+    y_n = zeros(M,dim); %crea una matrice di zeri contenente le M sequenze lungo le righe
+    Yf_n = y_n; %copia la matrice creata in quella che sarà la trasformata
+    for j = 1:M %ciclo per creare M sequenze zero-interleaved
+        i = j;
+        while i<dim+1
+            y_n(j,i) = x(i);
+            i = i+M;
+        end
+    end
+    Xf=fft(x);
+    Yf_n(P,:) = fft(y_n(P,:));
+    t=-dim/2:dim/2-1;
+    filtro_t=sinc(t/M);
+    filtro=abs(fft(filtro_t));
+    Zf_n=zeros(M,dim);
+    z=zeros(M,(2*dim)-1);
+    u=zeros(M,dim);
+    Zf_n(P,:) = Yf_n(P,:).*filtro;
+    z(P,:) = conv(y_n(P,:),filtro_t);
+    u(P,:) = z(P,(dim/2)+1:(3/2)*dim); %range di campioni utili della sequenza ricostruita
+    errorequadratico = immse(x(1,:),u(P,:));
+    mse(k) = errorequadratico;
+    k = k+1;
+end
+mse_t = zeros(1,M);
+threshold = zeros(1,M);
+for i = 1:M
+    mse_t(i) = mse(i);
+    threshold (i) = 1e-03;
+end
+mse_t(i) = NaN;
+stem(mse_t,'DisplayName','Errore Quadratico Medio');
+title('MSE al variare di M')
+xlim ([1 M])
+xticks (1:1:M)
+yticks (0:1e-04:1.2e-03)
+xlabel('Valore di M')
+ylabel('MSE')
+grid on
+hold on
+plot (threshold,'r','LineStyle','--','DisplayName','Threshold')
+legend('Location','North')
