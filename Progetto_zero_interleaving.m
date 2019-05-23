@@ -8,15 +8,15 @@
 % sequenza originaria                       x_n = 1,2,3,4,5,6,7,8,9,10...
 % sequenza zero_interleaved (fattore M = 3)  y_n= 1,0,0,4,0,0,7,0,0,10...
 
-% La sequenza di partenza x_n ha 400 campioni ed è fornita nel file zerointerleaving.mat
+% La sequenza di partenza x_n ha 400 campioni ed Ã¨ fornita nel file zerointerleaving.mat
 
 % Si richiede che lo script Matlab esegua le seguenti operazioni:
 
 % - generi la sequeza zero-interleaved y_n con M variabile (M = 2,3,...),
-% cioé si deve poter scegliere il numero di campioni (M-1) da azzerare.
+% cioÃ© si deve poter scegliere il numero di campioni (M-1) da azzerare.
 
 % - permetta di scegliere la posizione dei campioni non nulli, es. si chiede la
-% possibilità di generare M possibili sequenze con campioni non nulli in posizione
+% possibilitÃ  di generare M possibili sequenze con campioni non nulli in posizione
 % Mk, Mk+1, Mk+2, ... Mk+(M-1) con k = 0,1,2,...
 
 % - rappresenti graficamente la sequenza x_n e le sequenze y_n (zero_interleaved)
@@ -26,8 +26,8 @@
 % della sequenza x_n
 
 % - rappresenti graficamente la sequenza originaria x_n e la sua versione
-% ricostruita, mostrando che la sequenza ricostruita è la stessa qualunque
-% sia la scelta della posizione dei campioni non nulli (purché non vi siano fenomeni di alias).
+% ricostruita, mostrando che la sequenza ricostruita Ã¨ la stessa qualunque
+% sia la scelta della posizione dei campioni non nulli (purchÃ© non vi siano fenomeni di alias).
 
 % - permetta di valutare il massimo valore di M che non produce distorsione del segnale ricostrutito.
 
@@ -35,21 +35,22 @@
 % diverse da quella assegnata (es. diverso numero di campioni).
 % Definire in modo chiaro le variabili utilizzate e commentare sinteticamente i vari passi dello script.
 
-LOAD
-close all;
-%clear;
-clc;
+close all
+clear all
+clc
+
 prompt = ('Inserisci nome file :  ');
 nome_file = input (prompt, 's');
 load (nome_file);
 %load zerointerleaving.mat
-VARIABILI
+
+%VARIABILI
 y = x; %crea un secondo vettore per non modificare sequenza originale
 dim = length(x);
 M = input('Inserisci M: ');
-f_s = 1/M; %frequenza di campionamento, ma potremmo toglierla perch� non serve
+f_s = 1/M; %frequenza di campionamento, ma potremmo toglierla perchÃ© non serve
 y_n = zeros(M,dim); %crea una matrice di zeri contenente le M sequenze lungo le righe
-Yf_n = y_n; %copia la matrice creata in quella che sarà la trasformata
+Yf_n = y_n; %copia la matrice creata in quella che sarÃƒ  la trasformata
 n = (0:dim-1); %intervallo di rappresentazione
 Xf=fft(y);
 Zf_n=zeros(M,dim);
@@ -65,7 +66,7 @@ else
     t=-floor(dim/2):floor(dim/2);
     
 end
-ZERO-INTERLEAVING
+%ZERO-INTERLEAVING
 %ciclo per creare sequenze campionate
 for j = 1:M
     
@@ -78,10 +79,10 @@ for j = 1:M
     end
     
 end
-SEQUENZE
+%SEQUENZE
 
 %flag = 0; %flag per molteplici costrutti condizionati
-figure
+figure(1)
 subplot(2,1,1)
 stem (n,y);
 xlabel ('Campioni')
@@ -90,11 +91,12 @@ subplot(2,1,2)
 stem (n,real(Xf));
 xlabel ('Campioni')
 title('Trasformata della sequenza di partenza')
+pause
 for k = 1:M
         titolo = 'Sequenza con primo elemento diverso da 0 in posizione %d';
-        pos = k-1;
+        pos = k;
         Yf_n(k,:) = fft(y_n(k,:));
-        figure
+        figure (2)
         subplot(2,1,1)
         stem(n,y_n(k,:));
         xlabel ('Campioni')
@@ -104,30 +106,53 @@ for k = 1:M
         xlabel ('Campioni')
         title('Sequenza trasformata')
 end
-FILTRO
+pause
+
+%FILTRO
 filtro_t=sinc(t/M);
 filtro=abs(fft(filtro_t));
-figure
-subplot (2,1,1)
+figure (3)
+subplot (2,1,2)
 stem(filtro);
 title('Filtro in frequenza')
-subplot (2,1,2)
+subplot (2,1,1)
 plot(t,filtro_t);
 grid on;
 title('Filtro nei tempi')
+pause
 for i=1:M
     
-    figure
+    figure (4)
     Zf_n(i,:)=Yf_n(i,:).*filtro;
     z(i,:) = conv(y_n(i,:),filtro_t);
     u(i,:)=z(i,floor(dim/2)+1:fix((3/2)*dim));
-    subplot(2,1,1)
-    stem(u(i,:));
-    subplot(2,1,2)
-    stem(real(Zf_n(i,:)));
     
+    subplot(2,1,1)
+    stem(n,u(i,:),'filled','DisplayName','Sequenza ricostruita');
+    xlabel ('campioni')
+    legend
+    title('confronto sequenze partenza - ricostruita nei tempi')
+    hold on
+    stem (n,x,'r','DisplayName','Sequenza di partenza');
+    xlabel ('Campioni')
+    legend
+    hold off 
+    
+    subplot(2,1,2)
+    stem(n,real(Zf_n(i,:)),'filled','DisplayName','Sequenza ricostruita');
+    xlabel('campioni')
+    legend
+    title('confronto sequenze partenza - ricostruita nelle frequenze')
+    hold on
+    stem (n,real(Xf),'r','DisplayName','sequenza di partenza');
+    xlabel('campioni')
+    legend 
+    hold off
+   
+  
 end
-CALCOLO DELL'ERRORE
+pause
+%CALCOLO DELL'ERRORE
 r_n=zeros(dim);
 filter_t=zeros(dim);
 rec_sign=zeros(M,(2*dim)-1);
@@ -170,7 +195,7 @@ while flag==0
         i=i+1;
         
     end
-    %i=i-1;%decrementiamo perchè se 'i' è valore che fa uscire dal ciclo, ultimo valore accettabile è 'i-1'
+    %i=i-1;%decrementiamo perchÃƒÂ¨ se 'i' ÃƒÂ¨ valore che fa uscire dal ciclo, ultimo valore accettabile ÃƒÂ¨ 'i-1'
     erroreq=zeros(1,i);%crea vettore di zeri di lunghezza pari alla lunghezza i
     for j=1:i
         
@@ -181,7 +206,7 @@ while flag==0
     threshold (j+1) = err;
     
     %rappresentazione grafica dell'errore
-    figure
+    figure (5)
     stem(1:i,erroreq,'DisplayName','Errore Quadratico Medio')
     title('Correlazione tra M e MSE')
     xlabel ('Valori di M')
@@ -198,5 +223,5 @@ while flag==0
         flag=1;
     end
 end
-output = '\nIl massimo valore di M tale per cui la distorsione � inferiore al valore richiesto risulta essere %d ';
+output = '\nIl massimo valore di M tale per cui la distorsione è inferiore al valore richiesto risulta essere %d ';
 fprintf(output,i-1)
