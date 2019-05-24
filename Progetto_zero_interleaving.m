@@ -16,7 +16,7 @@
 % cioÃ© si deve poter scegliere il numero di campioni (M-1) da azzerare.
 
 % - permetta di scegliere la posizione dei campioni non nulli, es. si chiede la
-% possibilitÃ  di generare M possibili sequenze con campioni non nulli in posizione
+% possibilitÃ  di generare M possibili sequenze con campioni non nulli in posizione
 % Mk, Mk+1, Mk+2, ... Mk+(M-1) con k = 0,1,2,...
 
 % - rappresenti graficamente la sequenza x_n e le sequenze y_n (zero_interleaved)
@@ -93,18 +93,18 @@ xlabel ('Campioni')
 title('Trasformata della sequenza di partenza')
 pause
 for k = 1:M
-        titolo = 'Sequenza con primo elemento diverso da 0 in posizione %d';
-        pos = k;
-        Yf_n(k,:) = fft(y_n(k,:));
-        figure (2)
-        subplot(2,1,1)
-        stem(n,y_n(k,:));
-        xlabel ('Campioni')
-        title(sprintf(titolo,pos))
-        subplot(2,1,2)
-        stem(n,real(Yf_n(k,:)));
-        xlabel ('Campioni')
-        title('Sequenza trasformata')
+    titolo = 'Sequenza con primo elemento diverso da 0 in posizione %d';
+    pos = k;
+    Yf_n(k,:) = fft(y_n(k,:));
+    figure (2)
+    subplot(2,1,1)
+    stem(n,y_n(k,:));
+    xlabel ('Campioni')
+    title(sprintf(titolo,pos))
+    subplot(2,1,2)
+    stem(n,real(Yf_n(k,:)));
+    xlabel ('Campioni')
+    title('Sequenza trasformata')
 end
 pause
 
@@ -136,7 +136,7 @@ for i=1:M
     stem (n,x,'r','DisplayName','Sequenza di partenza');
     xlabel ('Campioni')
     legend
-    hold off 
+    hold off
     
     subplot(2,1,2)
     stem(n,real(Zf_n(i,:)),'filled','DisplayName','Sequenza ricostruita');
@@ -146,10 +146,10 @@ for i=1:M
     hold on
     stem (n,real(Xf),'r','DisplayName','sequenza di partenza');
     xlabel('campioni')
-    legend 
+    legend
     hold off
-   
-  
+    
+    
 end
 pause
 %CALCOLO DELL'ERRORE
@@ -191,37 +191,48 @@ flag=0;
 while flag==0
     err=input('inserisci errore quadratico medio massimo accettabile: ');
     i=1;
-    while(errorequadratico(i)<err)
+    while(errorequadratico(i)<err && i<dim)
         i=i+1;
         
     end
-    %i=i-1;%decrementiamo perchÃƒÂ¨ se 'i' ÃƒÂ¨ valore che fa uscire dal ciclo, ultimo valore accettabile ÃƒÂ¨ 'i-1'
-    erroreq=zeros(1,i);%crea vettore di zeri di lunghezza pari alla lunghezza i
-    for j=1:i
+    if i==dim
+        fprintf("errore inserito troppo alto!\n");
+        scelta=input('ripetere operazione per errore diverso? s--> si, altri tasti--> no ','s');
+        if scelta~='s'
+            flag=1;
+        end
         
-        erroreq(j) = errorequadratico(j);%copia i primi i valori del vettore errorequadratico in erroreq
-        threshold (j) = err;
+    else
+        %i=i-1;%decrementiamo perchÃƒÂ¨ se 'i' ÃƒÂ¨ valore che fa uscire dal ciclo, ultimo valore accettabile ÃƒÂ¨ 'i-1'
+        erroreq=zeros(1,i);%crea vettore di zeri di lunghezza pari alla lunghezza i
+        for j=1:i
+            
+            erroreq(j) = errorequadratico(j);%copia i primi i valori del vettore errorequadratico in erroreq
+            threshold (j) = err;
+            
+        end
+        threshold (j+1) = err;
         
-    end
-    threshold (j+1) = err;
-    
-    %rappresentazione grafica dell'errore
-    figure (5)
-    stem(1:i,erroreq,'DisplayName','Errore Quadratico Medio')
-    title('Correlazione tra M e MSE')
-    xlabel ('Valori di M')
-    ylabel ('MSE')
-    xticks(1:1:i+1)
-    %yticks (0:1e-04:(err+0.2e-03))
-    xlim([1 i+1])
-    grid on
-    hold on
-    plot (threshold,'r','LineStyle','--','DisplayName','Threshold')
-    legend('Location','North')
-    scelta=input('ripetere operazione per errore diverso? s--> si, altri tasti--> no ','s');
-    if scelta~='s'
-        flag=1;
+        %rappresentazione grafica dell'errore
+        figure (5)
+        stem(1:i,erroreq,'DisplayName','Errore Quadratico Medio')
+        title('Correlazione tra M e MSE')
+        xlabel ('Valori di M')
+        ylabel ('MSE')
+        xticks(1:1:i+1)
+        %yticks (0:1e-04:(err+0.2e-03))
+        xlim([1 i+1])
+        grid on
+        hold on
+        plot (threshold,'r','LineStyle','--','DisplayName','Threshold')
+        legend('Location','North');
+        hold off
+        output = '\nIl massimo valore di M tale per cui la distorsione è inferiore al valore richiesto risulta essere %d ';
+        fprintf(output,i-1)
+        scelta=input('\nripetere operazione per errore diverso? s--> si, altri tasti--> no ','s');
+        if scelta~='s'
+            flag=1;
+        end
+        
     end
 end
-output = '\nIl massimo valore di M tale per cui la distorsione è inferiore al valore richiesto risulta essere %d ';
-fprintf(output,i-1)
