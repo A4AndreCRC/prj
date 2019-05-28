@@ -42,20 +42,18 @@ clc
 prompt = ('Inserisci nome file :  ');
 nome_file = input (prompt, 's');
 load (nome_file);
-%load zerointerleaving.mat
 
-%VARIABILI
 y = x; %crea un secondo vettore per non modificare sequenza originale
 dim = length(x);
 M = input('Inserisci M: ');
-f_s = 1/M; %frequenza di campionamento, ma potremmo toglierla perchÃ© non serve
 y_n = zeros(M,dim); %crea una matrice di zeri contenente le M sequenze lungo le righe
-Yf_n = y_n; %copia la matrice creata in quella che sarÃƒ  la trasformata
+Yf_n = y_n; %copia la matrice di zeri creata in quella che sarà  la trasformata
 n = (0:dim-1); %intervallo di rappresentazione
-Xf=fft(y);
-Zf_n=zeros(M,dim);
+Xf=fft(y);%trasformata della sequenza originaria
+Zf_n=zeros(M,dim);%matrice delle trasformate delle singole sequenze
 z=zeros(M,(2*dim)-1);
 u=zeros(M,dim);
+
 %definizione asse tempi per filtro
 if mod(dim,2)==0
     
@@ -66,22 +64,24 @@ else
     t=-floor(dim/2):floor(dim/2);
     
 end
-%ZERO-INTERLEAVING
-%ciclo per creare sequenze campionate
-for j = 1:M
+
+%creazione matrice zerointerleaved
+
+for j = 1:M %scorre le M righe corrispondenti alle M sequenze zerointerleaved
     
     i = j;
-    while i<dim+1
-        
+    while i<dim+1 %ciclo per creare sequenze campionate
+
         y_n(j,i) = y(i);
         i = i+M;
         
     end
     
 end
-%SEQUENZE
 
-%flag = 0; %flag per molteplici costrutti condizionati
+%rappresentazione delle sequenze zerointerleaved nel dominio dei tempi e
+%frequenze
+
 figure(1)
 subplot(2,1,1)
 stem (n,y);
@@ -105,12 +105,15 @@ for k = 1:M
     stem(n,real(Yf_n(k,:)));
     xlabel ('Campioni')
     title('Sequenza trasformata')
+    pause
 end
-pause
 
-%FILTRO
-filtro_t=sinc(t/M);
-filtro=abs(fft(filtro_t));
+
+%creazione del filtro di ricostruzione
+filtro_t=sinc(t/M);%filtro nei tempi
+filtro=abs(fft(filtro_t));%filtro in frequenza
+
+%rappresentazione filtro 
 figure (3)
 subplot (2,1,2)
 stem(filtro);
@@ -120,49 +123,59 @@ plot(t,filtro_t);
 grid on;
 title('Filtro nei tempi')
 pause
+
+
+%ricostruzione della sequenza originaria a partire dalle sequenze
+%zerointerleaved
 for i=1:M
     
     figure (4)
-    Zf_n(i,:)=Yf_n(i,:).*filtro;
-    z(i,:) = conv(y_n(i,:),filtro_t);
-    u(i,:)=z(i,floor(dim/2)+1:fix((3/2)*dim));
-    
+    Zf_n(i,:)=Yf_n(i,:).*filtro;%ricostruzione in frequenza
+    z(i,:) = conv(y_n(i,:),filtro_t);%ricostruzione nei tempi
+    u(i,:)=z(i,floor(dim/2)+1:fix((3/2)*dim));%eliminazione campioni aggiunti
+    % dalla convoluzione
+
+    %rappresentazione della sequenza ricostruita al variare del primo elemento 
+    %non nullo con confronto con la sequenza originaria
+    titolo1='Confronto sequenze nei tempi con primo elemento diverso da 0 in posizione %d';
+    titolo2='Confronto sequenze nelle frequenze con primo elemento diverso da 0 in posizione %d';
     subplot(2,1,1)
     stem(n,u(i,:),'filled','DisplayName','Sequenza ricostruita');
-    xlabel ('campioni')
-    legend
-    title('confronto sequenze partenza - ricostruita nei tempi')
+    xlabel ('Campioni')
+    legend;
+    title(sprintf(titolo1,i))
     hold on
     stem (n,x,'r','DisplayName','Sequenza di partenza');
     xlabel ('Campioni')
-    legend
+    legend;
     hold off
     
     subplot(2,1,2)
     stem(n,real(Zf_n(i,:)),'filled','DisplayName','Sequenza ricostruita');
-    xlabel('campioni')
-    legend
-    title('confronto sequenze partenza - ricostruita nelle frequenze')
+    xlabel('Campioni')
+    legend;
+   title(sprintf(titolo2,i))
     hold on
-    stem (n,real(Xf),'r','DisplayName','sequenza di partenza');
-    xlabel('campioni')
-    legend
+    stem (n,real(Xf),'r','DisplayName','Sequenza di partenza');
+    xlabel('Campioni')
+    legend;
     hold off
+    pause
     
     
 end
-pause
-%CALCOLO DELL'ERRORE
+
+
+
+
+%inizializzazione variabili per il calcolo dell'errore
 r_n=zeros(dim);
 filter_t=zeros(dim);
 rec_sign=zeros(M,(2*dim)-1);
 sign=zeros(dim);
 errorequadratico=zeros(1,dim);
-threshold = zeros(1,dim);
-%calcolo la matrice contenente tutte le sequenze con primo campione non
-%nullo, al variare di M (che va da 1 a dim)
-%calcolo la matrice contentente le sequenze ricostruite per ogni riga della
-%matrice r_n
+
+
 for i=1:dim
     
     filter_t(i,:)=sinc(t/i);
@@ -170,31 +183,40 @@ for i=1:dim
 end
 
 for i=1:dim
-    
+%calcolo la matrice contenente tutte le sequenze con primo campione non
+%nullo, al variare di M (che va da 1 a dim)
+ 
     l=1;
     while l<dim+1
         r_n(i,l)=y(l);
         l=l+i;
         
     end
+    %calcolo la matrice rec_sign contentente le sequenze ricostruite per
+    % ogni riga della matrice r_n
     rec_sign(i,:) = conv(r_n(i,:),filter_t(i,:));
+    %eliminazione campioni aggiunti dalla convoluzione
     sign(i,:)=rec_sign(i,floor(dim/2)+1:fix((3/2)*dim));
 end
+
 %calcolo errore quadratico medio per tutti gli M
 for i=1:dim
     
     errorequadratico(i,:)=immse(y,sign(i,:));
     
 end
-flag=0;
 
-while flag==0
+flag=0;%variabile flag per ripetere il menù
+
+while flag==0%apertura menù di scelta
+    
     err=input('inserisci errore quadratico medio massimo accettabile: ');
     i=1;
     while(errorequadratico(i)<err && i<dim)
         i=i+1;
         
     end
+    %gestione caso in cui si inserisce un valore di errore troppo alto
     if i==dim
         fprintf("errore inserito troppo alto!\n");
         scelta=input('ripetere operazione per errore diverso? s--> si, altri tasti--> no ','s');
@@ -203,15 +225,15 @@ while flag==0
         end
         
     else
-        %i=i-1;%decrementiamo perchÃƒÂ¨ se 'i' ÃƒÂ¨ valore che fa uscire dal ciclo, ultimo valore accettabile ÃƒÂ¨ 'i-1'
+        
         erroreq=zeros(1,i);%crea vettore di zeri di lunghezza pari alla lunghezza i
-        for j=1:i
+       for j=1:i
             
-            erroreq(j) = errorequadratico(j);%copia i primi i valori del vettore errorequadratico in erroreq
-            threshold (j) = err;
+         erroreq(j) = errorequadratico(j);%copia i primi i valori del 
+         %vettore errorequadratico in erroreq
             
-        end
-        threshold (j+1) = err;
+            end
+        threshold (1:j+1) = err;
         
         %rappresentazione grafica dell'errore
         figure (5)
@@ -220,7 +242,6 @@ while flag==0
         xlabel ('Valori di M')
         ylabel ('MSE')
         xticks(1:1:i+1)
-        %yticks (0:1e-04:(err+0.2e-03))
         xlim([1 i+1])
         grid on
         hold on
